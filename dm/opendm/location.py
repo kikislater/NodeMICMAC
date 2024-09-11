@@ -5,7 +5,7 @@ from osgeo import osr
 
 def extract_utm_coords(photos, images_path, output_coords_file):
     """
-    Create a coordinate file containing the GPS positions of all cameras 
+    Create a coordinate file containing the GPS positions of all cameras
     to be used later in the ODM toolchain for automatic georeferecing
     :param photos ([ODM_Photo]) list of photos
     :param images_path (str) path to dataset images
@@ -14,7 +14,7 @@ def extract_utm_coords(photos, images_path, output_coords_file):
     """
     if len(photos) == 0:
         raise Exception("No input images, cannot create coordinates file of GPS positions")
-    
+
     utm_zone = None
     hemisphere = None
     coords = []
@@ -23,7 +23,7 @@ def extract_utm_coords(photos, images_path, output_coords_file):
         if photo.latitude is None or photo.longitude is None or photo.altitude is None:
             log.MM_ERROR("Failed parsing GPS position for %s, skipping" % photo.filename)
             continue
-        
+
         if utm_zone is None:
             utm_zone, hemisphere = get_utm_zone_and_hemisphere_from(photo.longitude, photo.latitude)
 
@@ -31,12 +31,12 @@ def extract_utm_coords(photos, images_path, output_coords_file):
             coord = convert_to_utm(photo.longitude, photo.latitude, photo.altitude, utm_zone, hemisphere)
         except:
             raise Exception("Failed to convert GPS position to UTM for %s" % photo.filename)
-        
+
         coords.append(coord)
 
     if utm_zone is None:
         raise Exception("No images seem to have GPS information")
-        
+
     # Calculate average
     dx = 0.0
     dy = 0.0
@@ -54,7 +54,7 @@ def extract_utm_coords(photos, images_path, output_coords_file):
         f.write("%s %s\n" % (dx, dy))
         for coord in coords:
             f.write("%s %s %s\n" % (coord[0] - dx, coord[1] - dy, coord[2]))
-    
+
 def transform2(from_srs, to_srs, x, y):
     return transformer(from_srs, to_srs).TransformPoint(x, y, 0)[:2]
 
@@ -73,14 +73,14 @@ def proj_srs_convert(srs):
     else:
         proj4 = srs.to_proj4()
         res.ImportFromProj4(proj4)
-    
+
     return res
 
 def transformer(from_srs, to_srs):
     src = proj_srs_convert(from_srs)
     tgt = proj_srs_convert(to_srs)
     return osr.CoordinateTransformation(src, tgt)
-    
+
 def get_utm_zone_and_hemisphere_from(lon, lat):
     """
     Calculate the UTM zone and hemisphere that a longitude/latitude pair falls on
@@ -106,7 +106,7 @@ def convert_to_utm(lon, lat, alt, utm_zone, hemisphere):
         p = Proj(proj='utm',zone=utm_zone,ellps='WGS84', preserve_units=True)
     else:
         p = Proj(proj='utm',zone=utm_zone,ellps='WGS84', preserve_units=True, south=True)
-    
+
     x,y = p(lon, lat)
     return [x, y, alt]
 
@@ -116,17 +116,17 @@ def parse_srs_header(header):
     :param header (str) line
     :return Proj object
     """
-    log.MM_INFO('Parsing SRS header: %s' % header)
+    log.MM_INFO(f'Parsing spatial reference system (SRS) header: {header}')
     header = header.strip()
     ref = header.split(' ')
     try:
         if ref[0] == 'WGS84' and ref[1] == 'UTM':
             datum = ref[0]
             utm_pole = (ref[2][len(ref[2]) - 1]).upper()
-            utm_zone = int(ref[2][:len(ref[2]) - 1])
-            
+            utm_zone = int(ref[2][:-1])
+
             proj_args = {
-                'zone': utm_zone, 
+                'zone': utm_zone,
                 'datum': datum
             }
 
@@ -140,7 +140,7 @@ def parse_srs_header(header):
         elif header.lower().startswith("epsg:"):
             srs = CRS.from_epsg(header.lower()[5:])
         else:
-            log.MM_ERROR('Could not parse coordinates. Bad SRS supplied: %s' % header)
+            log.MM_ERROR(f'Could not parse coordinates. Bad SRS supplied: {header}')
     except RuntimeError as e:
         log.MM_ERROR('Uh oh! There seems to be a problem with your coordinates/GCP file.\n\n'
                             'The line: %s\n\n'

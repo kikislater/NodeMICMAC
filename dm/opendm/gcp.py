@@ -14,21 +14,21 @@ class GCPFile:
 
     def read(self):
         if self.exists():
+            # Read the gcp_file.txt
             with open(self.gcp_path, 'r') as f:
-                contents = f.read().decode('utf-8-sig').encode('utf-8').strip()
+                contents = [line.rstrip() for line in f]
 
-            lines = map(str.strip, contents.split('\n'))
-            if lines:
-                self.raw_srs = lines[0] # SRS
-                self.srs = location.parse_srs_header(self.raw_srs)
+            # Get the spatial reference system (SRS) header from the first line
+            self.raw_srs = contents[0].strip()
+            self.srs = location.parse_srs_header(self.raw_srs)
 
-                for line in lines[1:]:
-                    if line != "" and line[0] != "#":
-                        parts = line.split()
-                        if len(parts) >= 6:
-                            self.entries.append(line)
-                        else:
-                            log.MM_WARNING("Malformed GCP line: %s" % line)
+            for line in contents[1:]:
+                if line != "" and line[0] != "#":
+                    parts = line.strip().split()
+                    if len(parts) >= 6:
+                        self.entries.append(line)
+                    else:
+                        log.MM_WARNING("Malformed GCP line: %s" % line)
 
     def iter_entries(self):
         for entry in self.entries:
