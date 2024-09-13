@@ -364,7 +364,7 @@ Stay current with upstream MicMac development providing an easy to use interface
 
 ## MicMac Version
 
-Cloned: 2022-06-05 Commit: [797e98d](https://github.com/micmacIGN/micmac/commit/797e98d69f59fc7879d143353a94b06d970a9a24)
+Cloned: 2023-03-10 Commit: [8ef0550](https://github.com/micmacIGN/micmac/commit/8ef05507fb1f3607dbf164b2500233675c971205)
 MicMac is under CeCill-B License
 Original running project could be find following this link : http://logiciels.ign.fr/?Micmac
 
@@ -378,3 +378,5 @@ This project was originally developed by [DroneMapper](https://dronemapper.com).
 [IRD](https://ird.fr)
 
 [RumenMitrev](https://github.com/rumenmitrev)
+[Sebastien Bonaime](https://github.com/sbonaime)
+
