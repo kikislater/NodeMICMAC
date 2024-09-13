@@ -14,26 +14,58 @@ class GCPFile:
 
     def read(self):
         if self.exists():
-            # Read the gcp_file.txt
             with open(self.gcp_path, 'r') as f:
-                contents = [line.rstrip() for line in f]
+                contents = f.read().strip()
 
-            # Get the spatial reference system (SRS) header from the first line
-            self.raw_srs = contents[0].strip()
-            self.srs = location.parse_srs_header(self.raw_srs)
+            # Strip eventual BOM characters
+            contents = contents.replace('\ufeff', '')
+            
+            lines = list(map(str.strip, contents.split('\n')))
+            if lines:
+                self.raw_srs = lines[0] # SRS
+                self.srs = location.parse_srs_header(self.raw_srs)
 
-            for line in contents[1:]:
-                if line != "" and line[0] != "#":
-                    parts = line.strip().split()
-                    if len(parts) >= 6:
-                        self.entries.append(line)
-                    else:
-                        log.MM_WARNING("Malformed GCP line: %s" % line)
+                for line in contents[1:]:
+                    if line != "" and line[0] != "#":
+                        parts = line.strip().split()
+                        if len(parts) >= 6:
+                            self.entries.append(line)
+                        else:
+                            log.MM_WARNING("Malformed GCP line: %s" % line)
 
     def iter_entries(self):
         for entry in self.entries:
             yield self.parse_entry(entry)
 
+    def check_entries(self):
+        coords = {}
+        gcps = {}
+        errors = 0
+
+        for entry in self.iter_entries():
+            k = entry.coords_key()
+            coords[k] = coords.get(k, 0) + 1
+            if k not in gcps:
+                gcps[k] = []
+            gcps[k].append(entry)
+
+        for k in coords:
+            if coords[k] < 3:
+                description = "insufficient" if coords[k] < 2 else "not ideal"
+                for entry in gcps[k]:
+                    log.ODM_WARNING(str(entry))
+                log.ODM_WARNING("The number of images where the GCP %s has been tagged are %s" % (k, description))
+                log.ODM_WARNING("You should tag at least %s more images" % (3 - coords[k]))
+                log.ODM_WARNING("=====================================")
+                errors += 1
+        if len(coords) < 3:
+            log.ODM_WARNING("Low number of GCPs detected (%s). For best results use at least 5." % (3 - len(coords)))
+            log.ODM_WARNING("=====================================")
+            errors += 1
+
+        if errors > 0:
+            log.ODM_WARNING("Some issues detected with GCPs (but we're going to process this anyway)")
+    
     def parse_entry(self, entry):
         if entry:
             parts = entry.split()
@@ -50,6 +82,25 @@ class GCPFile:
 
     def exists(self):
         return bool(self.gcp_path and os.path.exists(self.gcp_path))
+
+    def make_resized_copy(self, gcp_file_output, ratio):
+        """
+        Creates a new resized GCP file from an existing GCP file. If one already exists, it will be removed.
+        :param gcp_file_output output path of new GCP file
+        :param ratio scale GCP coordinates by this value
+        :return path to new GCP file
+        """
+        output = [self.raw_srs]
+
+        for entry in self.iter_entries():
+            entry.px *= ratio
+            entry.py *= ratio
+            output.append(str(entry))
+
+        with open(gcp_file_output, 'w') as f:
+            f.write('\n'.join(output) + '\n')
+
+        return gcp_file_output
 
     def wgs84_utm_zone(self):
         """
