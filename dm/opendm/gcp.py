@@ -155,7 +155,7 @@ class GCPFile:
         if os.path.exists(gcp_file_output):
             os.remove(gcp_file_output)
 
-        files = map(os.path.basename, glob.glob(os.path.join(images_dir, "*")))
+        files = list(map(os.path.basename, glob.glob(os.path.join(images_dir, "*"))))
 
         output = [self.raw_srs]
         files_found = 0
@@ -234,6 +234,9 @@ class GCPEntry:
         self.filename = filename
         self.extras = extras
 
+    def coords_key(self):
+        return "{} {} {}".format(self.x, self.y, self.z)
+    
     def __str__(self):
         return "{} {} {} {} {} {} {}".format(self.x, self.y, self.z,
                                              self.px, self.py,
