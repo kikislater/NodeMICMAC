@@ -25,9 +25,9 @@ class GCPFile:
                 self.raw_srs = lines[0] # SRS
                 self.srs = location.parse_srs_header(self.raw_srs)
 
-                for line in contents[1:]:
+                for line in lines[1:]:
                     if line != "" and line[0] != "#":
-                        parts = line.strip().split()
+                        parts = line.split()
                         if len(parts) >= 6:
                             self.entries.append(line)
                         else:
