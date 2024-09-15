@@ -71,7 +71,7 @@
   },
   "--version": {
     "action": "version",
-    "version": "DroneMapper MicMac",
+    "version": "Node MicMac",
     "help": "Displays version number and exits. "
   }
 }
