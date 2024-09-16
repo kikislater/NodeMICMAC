@@ -58,7 +58,7 @@ From: ubuntu:21.04
     ./dm/VERSION /code/VERSION
     ./dm/run.sh /code/run.sh
     ./dm/run.py /code/run.py
-    ./var/www /var/www
+    . /var/www
 
 %runscript
     cd "/var/www"
