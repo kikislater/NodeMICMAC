@@ -1,0 +1,68 @@
+Bootstrap: docker
+From: ubuntu:21.04
+
+%labels
+    Author Sylvain POULAIN
+    Version 1.0
+    Description Apptainer container for NodeMICMAC and WebGIS with Entwine and MicMac.
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export PATH=$PATH:/code/micmac/bin
+    export python=$(which python3)
+
+%post
+    # Set up the environment
+    apt-get update && apt-get install -y \
+        software-properties-common build-essential cmake git \
+        exiv2 libimage-exiftool-perl proj-bin gdal-bin figlet imagemagick pdal libpdal-dev \
+        libboost-all-dev libtbb-dev libssl-dev libcurl4-openssl-dev pkg-config libpth-dev \
+        curl libx11-dev python3-pip python3-setuptools python3-shapely apt-utils
+
+    pip3 install -U shyaml appsettings utm pyproj scikit-image
+
+    # Install Node.js
+    curl -sL https://deb.nodesource.com/setup_14.x | bash -
+    apt-get install -y nodejs
+    npm install -g nodemon
+
+    # Build Entwine
+    mkdir /staging && cd /staging
+    git clone --depth 1 https://github.com/OpenDroneMap/entwine
+    cd entwine && mkdir build && cd build
+    cmake -DCMAKE_INSTALL_PREFIX=/usr -DWITH_TESTS=OFF -DCMAKE_BUILD_TYPE=Release ../
+    make -j$(nproc) && make install
+    cd / && rm -rf /staging
+
+    # Build MicMac
+    mkdir /var/www && cd /var/www
+    git clone --depth 1 https://github.com/OpenDroneMap/micmac
+    cd micmac && mkdir build && cd build
+    cmake -DBUILD_POISSON=0 -DBUILD_RNX2RTKP=0 -DWITH_OPENCL=OFF -DWITH_OPEN_MP=OFF -DWITH_ETALONPOLY=OFF -DWERROR=OFF ../
+    make clean && make -j$(nproc) && make install
+    mkdir -p /code/micmac && cd ..
+    cp -Rdp bin binaire-aux lib include /code/micmac
+
+    # Set up the working directories
+    mkdir -p /code /code/opendm
+    ln -s $(which python3) /usr/bin/python
+    figlet -f slant NodeMICMAC
+
+    # Clean up
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/www/micmac
+
+%files
+    ./dm/opendm /code/opendm
+    ./dm/odm_options.json /code/odm_options.json
+    ./dm/settings.yaml /code/settings.yaml
+    ./dm/VERSION /code/VERSION
+    ./dm/run.sh /code/run.sh
+    ./dm/run.py /code/run.py
+    ./var/www /var/www
+
+%runscript
+    cd "/var/www"
+    exec /usr/bin/node /var/www/index.js "$@"
+%startscript
+    cd "/var/www"
+    exec /usr/bin/node /var/www/index.js "$@"
